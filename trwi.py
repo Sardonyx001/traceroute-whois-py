@@ -21,8 +21,9 @@ import re
 import subprocess
 import argparse
 from ipwhois import IPWhois
+from halo import Halo
 
-
+@Halo(text='Loading', spinner='bouncingBar')
 def run_traceroute(destination: str) -> str: 
     """
     Runs a traceroute to the specified destination and returns the output.
@@ -77,13 +78,13 @@ def extract_ip_addresses(traceroute_output: str) -> list[str]:
     unique_ip_addresses: list[str] = []
     seen = set()
     for ip in ip_addresses:
-        if ip not in seen:
+        if ip not in seen and "192.168" not in ip:
             unique_ip_addresses.append(ip)
             seen.add(ip)
 
     return unique_ip_addresses
 
-
+@Halo(text='Tracing', spinner='bouncingBar')
 def get_whois_info(ip_address: str) -> dict[str, None] | str:
     """
     Retrieves WHOIS information for the specified IP address.
@@ -108,21 +109,24 @@ def main():
         description="Print Ip Addresses and their respective organization of each IP passes through traceroute"
     )
     parser.add_argument(
-        "-i", dest="ip_address", required=True, help="IP address to lookup"
+        "-t", dest="destinations", nargs='+', required=True, help="IP address or hostname to lookup. It can also be a list"
     )
 
     args = parser.parse_args()
-    ip_address: str = args.ip_address
+    destinations: list[str] = args.destinations
+    for dest in destinations:
+        traceroute_output = run_traceroute(dest)
+        ip_addresses = extract_ip_addresses(traceroute_output)
 
-    traceroute_output = run_traceroute(ip_address)
-    ip_addresses = extract_ip_addresses(traceroute_output)
-
-    for ip in ip_addresses:
-        whois_info = get_whois_info(ip)
-        if isinstance(whois_info, dict):
-            print(f'{ip}: {whois_info["asn_description"]}')
-        else:
-            print("Something went wrong.")
+        print(f"Traceroute and Whois info for {dest}")
+        i: int = 0
+        for i,ip in enumerate(ip_addresses):
+            whois_info = get_whois_info(ip)
+            if isinstance(whois_info, dict):
+                print(f'{i+1}* {ip}: {whois_info["asn_description"]}')
+            else:
+                print(whois_info)
+        print("-"*80)
 
 
 if __name__ == "__main__":
