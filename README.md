@@ -27,3 +27,8 @@ python trwi.py -i example.com
 ```
 
 The script will execute the traceroute command and display a list of unique IP addresses in the order they were encountered and which organization or company they belong too.
+
+## TODO
+
+- The script depends on the traceroute program already installed on the system so it is kinda very slow. Maybe using another language like go or rust might make it faster.
+- Also I wanna add a loading spinner or something.
