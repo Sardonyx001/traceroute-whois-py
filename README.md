@@ -31,4 +31,5 @@ The script will execute the traceroute command and display a list of unique IP a
 ## TODO
 
 - The script depends on the traceroute program already installed on the system so it is kinda very slow. Maybe using another language like go or rust might make it faster.
+- Write my own Traceroute in Python
 - ~~Also I wanna add a loading spinner or something.~~ ✅
