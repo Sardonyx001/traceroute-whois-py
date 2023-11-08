@@ -16,41 +16,51 @@
 #include <sys/types.h>
 #include <unistd.h>
 
+#define BUFFLEN 512
+#define PORT 32768+666
+
+/**
+ * Creates a raw socket, receives ICMP packets, and prints information about the
+ * received packets.
+ */
 int main() {
-  int sockfd, retval, n;
-  socklen_t clilen;
-  struct sockaddr_in cliaddr, servaddr;
-  char buf[10000];
-  int i;
+    int rx;
+    int rx_bytes;
+    struct sockaddr_in rx_sockaddr;
 
-  sockfd = socket(AF_INET, SOCK_RAW, IPPROTO_ICMP);
-  if (sockfd < 0) {
-    perror("sock:");
-    exit(1);
-  }
+    int tx;
+    struct sockaddr_in tx_sockaddr;
 
-  clilen = sizeof(struct sockaddr_in);
-  while (1) {
-    printf(" before recvfrom\n");
-    n = recvfrom(sockfd, buf, 10000, 0, (struct sockaddr *)&cliaddr, &clilen);
-    printf(" rec'd %d bytes\n", n);
+    char buf[BUFFLEN];
+    socklen_t socklen = sizeof(struct sockaddr_in);
 
-    struct ip *ip_hdr = (struct ip *)buf;
-    printf("IP header is %d bytes.\n", ip_hdr->ip_len * 4);
-    char targetaddr_str[INET_ADDRSTRLEN];
-    inet_ntop(AF_INET, &ip_hdr->ip_dst.s_addr, targetaddr_str, INET_ADDRSTRLEN);
-    printf("Target IP is %s\n", targetaddr_str);
-
-    for (i = 0; i < n; i++) {
-      printf("%02X%s", (uint8_t)buf[i], (i + 1) % 16 ? " " : "\n");
+    /* Check if socket creation for either the ICMP or UDP socket failed. */
+    rx = socket(AF_INET, SOCK_RAW, IPPROTO_ICMP);
+    tx = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+    if (rx < 0 || tx < 0) {
+        perror("socket failed");
+        exit(1);
     }
-    printf("\n");
+    int ttl = 0;
+    char curr_addr[INET_ADDRSTRLEN];
+    
+    
+    while (ttl++ < IPDEFTTL) {
+        printf("Sending empty UDP packet...\n");
 
-    struct icmp *icmp_hdr =
-        (struct icmp *)((char *)ip_hdr + (4 * ip_hdr->ip_len));
-    printf("ICMP msgtype=%d, code=%d", icmp_hdr->icmp_type,
-           icmp_hdr->icmp_code);
-  }
 
-  return 0;
+
+        printf("Waiting for ICMP packet...\n");
+        rx_bytes = recvfrom(rx, buf, BUFFLEN, 0, (struct sockaddr *)&rx_sockaddr, &socklen);
+
+        struct ip *ip_hdr = (struct ip *)buf;
+        inet_ntop(AF_INET, &ip_hdr->ip_dst.s_addr, curr_addr, INET_ADDRSTRLEN);
+        printf("IP %s\n", curr_addr);
+        
+    }
+
+    close(rx);
+    close(tx);
+
+    return 0;
 }
